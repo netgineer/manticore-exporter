@@ -109,7 +109,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "sphinx_up{instance=\"$host\"}",
+              "expr": "manticore_up{instance=\"$host\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -119,7 +119,7 @@
             }
           ],
           "thresholds": "0,1",
-          "title": "Sphinx Status",
+          "title": "Manticore Status",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -196,7 +196,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "sphinx_uptime{instance=\"$host\"}",
+              "expr": "manticore_uptime{instance=\"$host\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "refId": "A",
@@ -204,7 +204,7 @@
             }
           ],
           "thresholds": "300,3600",
-          "title": "Sphinx Uptime",
+          "title": "Manticore Uptime",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -276,7 +276,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "sum(sphinx_threads_count{instance=\"$host\"})",
+              "expr": "sum(manticore_threads_count{instance=\"$host\"})",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A",
@@ -284,7 +284,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Sphinx Threads",
+          "title": "Manticore Threads",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -356,7 +356,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "rate(sphinx_queries{instance=\"$host\"}[$interval]) or irate(sphinx_queries{instance=\"$host\"}[5m])",
+              "expr": "rate(manticore_queries{instance=\"$host\"}[$interval]) or irate(manticore_queries{instance=\"$host\"}[5m])",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A",
@@ -364,7 +364,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Sphinx Queries",
+          "title": "Manticore Queries",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -436,7 +436,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "(sphinx_query_wall{instance=\"$host\"} / sphinx_queries{instance=\"$host\"})*1000",
+              "expr": "(manticore_query_wall{instance=\"$host\"} / manticore_queries{instance=\"$host\"})*1000",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
@@ -445,7 +445,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Sphinx Avg query time",
+          "title": "Manticore Avg query time",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -517,7 +517,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "sphinx_index_count{instance=\"$host\"}",
+              "expr": "manticore_index_count{instance=\"$host\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "refId": "A",
@@ -525,7 +525,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Sphinx Indexes",
+          "title": "Manticore Indexes",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -594,17 +594,17 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "rate(sphinx_command_delete{instance=\"$host\"}[$interval]) or irate(sphinx_command_delete{instance=\"$host\"}[5m])",
+              "expr": "rate(manticore_command_delete{instance=\"$host\"}[$interval]) or irate(manticore_command_delete{instance=\"$host\"}[5m])",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
               "legendFormat": "Delete",
-              "metric": "sphinx_c",
+              "metric": "manticore_c",
               "refId": "A",
               "step": 60
             },
             {
-              "expr": "rate(sphinx_command_flushattrs{instance=\"$host\"}[$interval]) or irate(sphinx_command_flushattrs{instance=\"$host\"}[5m])",
+              "expr": "rate(manticore_command_flushattrs{instance=\"$host\"}[$interval]) or irate(manticore_command_flushattrs{instance=\"$host\"}[5m])",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
@@ -613,7 +613,7 @@
               "step": 60
             },
             {
-              "expr": "rate(sphinx_command_keywords{instance=\"$host\"}[$interval]) or irate(sphinx_command_keywords{instance=\"$host\"}[5m])",
+              "expr": "rate(manticore_command_keywords{instance=\"$host\"}[$interval]) or irate(manticore_command_keywords{instance=\"$host\"}[5m])",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
@@ -622,7 +622,7 @@
               "step": 60
             },
             {
-              "expr": "rate(sphinx_command_persist{instance=\"$host\"}[$interval]) or irate(sphinx_command_persist{instance=\"$host\"}[5m])",
+              "expr": "rate(manticore_command_persist{instance=\"$host\"}[$interval]) or irate(manticore_command_persist{instance=\"$host\"}[5m])",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
@@ -631,7 +631,7 @@
               "step": 60
             },
             {
-              "expr": "rate(sphinx_command_search{instance=\"$host\"}[$interval]) or irate(sphinx_command_search{instance=\"$host\"}[5m])",
+              "expr": "rate(manticore_command_search{instance=\"$host\"}[$interval]) or irate(manticore_command_search{instance=\"$host\"}[5m])",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
@@ -640,7 +640,7 @@
               "step": 60
             },
             {
-              "expr": "rate(sphinx_command_status{instance=\"$host\"}[$interval]) or irate(sphinx_command_status{instance=\"$host\"}[5m])",
+              "expr": "rate(manticore_command_status{instance=\"$host\"}[$interval]) or irate(manticore_command_status{instance=\"$host\"}[5m])",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
@@ -649,7 +649,7 @@
               "step": 60
             },
             {
-              "expr": "rate(sphinx_command_update{instance=\"$host\"}[$interval]) or irate(sphinx_command_update{instance=\"$host\"}[5m])",
+              "expr": "rate(manticore_command_update{instance=\"$host\"}[$interval]) or irate(manticore_command_update{instance=\"$host\"}[5m])",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
@@ -746,7 +746,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "sphinx_indexed_documents{instance=\"$host\"}",
+              "expr": "manticore_indexed_documents{instance=\"$host\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -758,7 +758,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Sphinx Indexed documents",
+          "title": "Manticore Indexed documents",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -831,7 +831,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "sphinx_indexed_bytes{instance=\"$host\"}",
+              "expr": "manticore_indexed_bytes{instance=\"$host\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{index}}",
@@ -842,7 +842,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Sphinx Indexed bytes",
+          "title": "Manticore Indexed bytes",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -924,7 +924,7 @@
               "aggregator": "sum",
               "downsampleAggregator": "avg",
               "downsampleFillPolicy": "none",
-              "expr": "sphinx_ram_bytes{instance=\"$host\"}",
+              "expr": "manticore_ram_bytes{instance=\"$host\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{index}}",
@@ -935,7 +935,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Sphinx Indexes RAM",
+          "title": "Manticore Indexes RAM",
           "tooltip": {
             "shared": true,
             "sort": 2,
@@ -1060,7 +1060,7 @@
         "multi": false,
         "name": "host",
         "options": [],
-        "query": "label_values(sphinx_up, instance)",
+        "query": "label_values(manticore_up, instance)",
         "refresh": 1,
         "regex": "",
         "sort": 3,
@@ -1102,6 +1102,6 @@
     ]
   },
   "timezone": "",
-  "title": "Sphinx Overview",
+  "title": "Manticore Overview",
   "version": 23
 }

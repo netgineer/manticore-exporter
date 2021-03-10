@@ -1,4 +1,4 @@
-module github.com/foxdalas/sphinx_exporter
+module git.habralab.ru/oleg/manticore-exporter
 
 go 1.12
 

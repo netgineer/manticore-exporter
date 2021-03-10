@@ -13,4 +13,4 @@
 
 include Makefile.common
 
-DOCKER_IMAGE_NAME ?= sphinx-exporter
+DOCKER_IMAGE_NAME ?= manticore-exporter

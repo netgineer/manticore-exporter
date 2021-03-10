@@ -1,5 +1,5 @@
 /.build
 /.release
 /.tarballs
-sphinx_exporter
+manticore_exporter
 *.tar.gz

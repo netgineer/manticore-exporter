@@ -3,7 +3,7 @@ go:
     # be updated.
     version: 1.13
 repository:
-    path: github.com/foxdalas/sphinx_exporter
+    path: github.com/foxdalas/manticore_exporter
 build:
     flags: -a -tags netgo
     ldflags: |

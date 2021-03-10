@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	namespace = "sphinx"
+	namespace = "manticore"
 )
 
 var (
@@ -25,12 +25,14 @@ var (
 
 // Exporter collects metrics from a searchd server.
 type Exporter struct {
-	sphinx string
+	manticore string
 
 	up                    *prometheus.Desc
 	uptime                *prometheus.Desc
 	connections           *prometheus.Desc
 	maxed_out             *prometheus.Desc
+	version								*prometheus.Desc
+	mysql_version         *prometheus.Desc
 	command_search        *prometheus.Desc
 	command_update        *prometheus.Desc
 	command_delete        *prometheus.Desc
@@ -38,10 +40,20 @@ type Exporter struct {
 	command_persist       *prometheus.Desc
 	command_status        *prometheus.Desc
 	command_flushattrs    *prometheus.Desc
+	command_set						*prometheus.Desc
+	command_insert				*prometheus.Desc
+	command_replace				*prometheus.Desc
+	command_commit				*prometheus.Desc
+	command_suggest				*prometheus.Desc
+	command_json					*prometheus.Desc
+	command_callpq				*prometheus.Desc
 	agent_connect         *prometheus.Desc
 	agent_retry           *prometheus.Desc
 	queries               *prometheus.Desc
 	dist_queries          *prometheus.Desc
+	workers_total					*prometheus.Desc
+	workers_active				*prometheus.Desc
+	work_queue_length			*prometheus.Desc
 	query_wall            *prometheus.Desc
 	query_cpu             *prometheus.Desc
 	dist_wall             *prometheus.Desc
@@ -80,7 +92,7 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 	c := "@tcp(" + server + ":" + port + ")/"
 
 	return &Exporter{
-		sphinx: c,
+		manticore: c,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
 			"Could the searchd server be reached.",
@@ -102,6 +114,18 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 		maxed_out: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "maxed_out"),
 			"Number of max children barier since the server started.",
+			nil,
+			nil,
+		),
+		maxed_out: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "version"),
+			"Server version.",
+			nil,
+			nil,
+		),
+		maxed_out: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "mysql_version"),
+			"Mysql version.",
 			nil,
 			nil,
 		),
@@ -147,6 +171,48 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 			nil,
 			nil,
 		),
+		command_flushattrs: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "command_set"),
+			"Number of set command since server start.",
+			nil,
+			nil,
+		),
+		command_flushattrs: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "command_insert"),
+			"Number of insert command since server start.",
+			nil,
+			nil,
+		),
+		command_flushattrs: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "command_replace"),
+			"Number of replace command since server start.",
+			nil,
+			nil,
+		),
+		command_flushattrs: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "command_commit"),
+			"Number of commit command since server start.",
+			nil,
+			nil,
+		),
+		command_flushattrs: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "command_suggest"),
+			"Number of suggest command since server start.",
+			nil,
+			nil,
+		),
+		command_flushattrs: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "command_json"),
+			"Number of json command since server start.",
+			nil,
+			nil,
+		),
+		command_flushattrs: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "command_callpq"),
+			"Number of callpq command since server start.",
+			nil,
+			nil,
+		),
 		agent_connect: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "agent_connect"),
 			"Number of agent connect since server start.",
@@ -168,6 +234,24 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 		dist_queries: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "dist_queries"),
 			"Number of distributed queries since server start.",
+			nil,
+			nil,
+		),
+		dist_queries: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "workers_total"),
+			"Number of workers total since server start.",
+			nil,
+			nil,
+		),
+		dist_queries: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "workers_active"),
+			"Number of workers active since server start.",
+			nil,
+			nil,
+		),
+		dist_queries: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "work_queue_length"),
+			"Number of work queue length since server start.",
 			nil,
 			nil,
 		),
@@ -371,6 +455,8 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.uptime
 	ch <- e.connections
 	ch <- e.maxed_out
+	ch <- e.version
+	ch <- e.mysql_version
 	ch <- e.command_search
 	ch <- e.command_update
 	ch <- e.command_delete
@@ -378,10 +464,20 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.command_persist
 	ch <- e.command_status
 	ch <- e.command_flushattrs
+	ch <- e.command_set
+	ch <- e.command_insert
+	ch <- e.command_replace
+	ch <- e.command_commit
+	ch <- e.command_suggest
+	ch <- e.command_json
+	ch <- e.command_callpq
 	ch <- e.agent_connect
 	ch <- e.agent_retry
 	ch <- e.queries
 	ch <- e.dist_queries
+	ch <- e.workers_total
+	ch <- e.workers_active
+	ch <- e.work_queue_length
 	ch <- e.query_wall
 	ch <- e.query_cpu
 	ch <- e.dist_wall
@@ -419,7 +515,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	status := 1
 
-	db, err := sql.Open("mysql", e.sphinx)
+	db, err := sql.Open("mysql", e.manticore)
 	if err != nil {
 		log.Error(err)
 		return
@@ -453,6 +549,10 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.connections, prometheus.CounterValue, parse(v))
 		case k == "maxed_out":
 			ch <- prometheus.MustNewConstMetric(e.maxed_out, prometheus.CounterValue, parse(v))
+		case k == "version":
+			ch <- prometheus.MustNewConstMetric(e.version, prometheus.CounterValue, parse(v))
+		case k == "mysql_version":
+			ch <- prometheus.MustNewConstMetric(e.mysql_version, prometheus.CounterValue, parse(v))
 		case k == "command_search":
 			ch <- prometheus.MustNewConstMetric(e.command_search, prometheus.CounterValue, parse(v))
 		case k == "command_update":
@@ -467,6 +567,18 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.command_status, prometheus.CounterValue, parse(v))
 		case k == "command_flushattrs":
 			ch <- prometheus.MustNewConstMetric(e.command_flushattrs, prometheus.CounterValue, parse(v))
+		case k == "command_set":
+			ch <- prometheus.MustNewConstMetric(e.command_set, prometheus.CounterValue, parse(v))
+		case k == "command_insert":
+			ch <- prometheus.MustNewConstMetric(e.command_insert, prometheus.CounterValue, parse(v))
+		case k == "command_replace":
+			ch <- prometheus.MustNewConstMetric(e.command_replace, prometheus.CounterValue, parse(v))
+		case k == "command_commit":
+			ch <- prometheus.MustNewConstMetric(e.command_commit, prometheus.CounterValue, parse(v))
+		case k == "command_flushattrs":
+			ch <- prometheus.MustNewConstMetric(e.command_json, prometheus.CounterValue, parse(v))
+		case k == "command_flushattrs":
+			ch <- prometheus.MustNewConstMetric(e.command_callpq, prometheus.CounterValue, parse(v))
 		case k == "agent_connect":
 			ch <- prometheus.MustNewConstMetric(e.agent_connect, prometheus.CounterValue, parse(v))
 		case k == "agent_retry":
@@ -475,6 +587,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.queries, prometheus.CounterValue, parse(v))
 		case k == "dist_queries":
 			ch <- prometheus.MustNewConstMetric(e.dist_queries, prometheus.CounterValue, parse(v))
+		case k == "workers_total":
+			ch <- prometheus.MustNewConstMetric(e.workers_total, prometheus.CounterValue, parse(v))
+		case k == "workers_active":
+			ch <- prometheus.MustNewConstMetric(e.workers_active, prometheus.CounterValue, parse(v))
+		case k == "work_queue_length":
+			ch <- prometheus.MustNewConstMetric(e.work_queue_length, prometheus.CounterValue, parse(v))
 		case k == "query_wall":
 			ch <- prometheus.MustNewConstMetric(e.query_wall, prometheus.CounterValue, parse(v))
 		case k == "query_cpu":
@@ -637,19 +755,19 @@ func parse(stat string) float64 {
 
 func main() {
 	var (
-		address       = kingpin.Flag("sphinx.address", "Sphinx server address.").Default("127.0.0.1").String()
-		port          = kingpin.Flag("sphinx.port", "Sphinx server port.").Default("9306").String()
-		timeout       = kingpin.Flag("sphinx.timeout", "memcached connect timeout.").Default("1s").Duration()
+		address       = kingpin.Flag("manticore.address", "manticore server address.").Default("127.0.0.1").String()
+		port          = kingpin.Flag("manticore.port", "manticore server port.").Default("9306").String()
+		timeout       = kingpin.Flag("manticore.timeout", "manticore connect timeout.").Default("1s").Duration()
 		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9247").String()
 		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
 	)
 
 	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("sphinx_exporter"))
+	kingpin.Version(version.Print("manticore_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	log.Infoln("Starting sphinx_exporter", version.Info())
+	log.Infoln("Starting manticore_exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
 
 	prometheus.MustRegister(NewExporter(*address, *port, *timeout))
@@ -657,9 +775,9 @@ func main() {
 	http.Handle(*metricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
-      <head><title>Sphinx Exporter</title></head>
+      <head><title>ManticoreSearch Exporter</title></head>
       <body>
-      <h1>Sphinx Exporter</h1>
+      <h1>ManticoreSearch Exporter</h1>
       <p><a href='` + *metricsPath + `'>Metrics</a></p>
       </body>
       </html>`))

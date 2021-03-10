@@ -117,13 +117,13 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 			nil,
 			nil,
 		),
-		maxed_out: prometheus.NewDesc(
+		version: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "version"),
 			"Server version.",
 			nil,
 			nil,
 		),
-		maxed_out: prometheus.NewDesc(
+		mysql_version: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "mysql_version"),
 			"Mysql version.",
 			nil,
@@ -171,43 +171,43 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 			nil,
 			nil,
 		),
-		command_flushattrs: prometheus.NewDesc(
+		command_set: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "command_set"),
 			"Number of set command since server start.",
 			nil,
 			nil,
 		),
-		command_flushattrs: prometheus.NewDesc(
+		command_insert: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "command_insert"),
 			"Number of insert command since server start.",
 			nil,
 			nil,
 		),
-		command_flushattrs: prometheus.NewDesc(
+		command_replace: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "command_replace"),
 			"Number of replace command since server start.",
 			nil,
 			nil,
 		),
-		command_flushattrs: prometheus.NewDesc(
+		command_commit: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "command_commit"),
 			"Number of commit command since server start.",
 			nil,
 			nil,
 		),
-		command_flushattrs: prometheus.NewDesc(
+		command_suggest: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "command_suggest"),
 			"Number of suggest command since server start.",
 			nil,
 			nil,
 		),
-		command_flushattrs: prometheus.NewDesc(
+		command_json: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "command_json"),
 			"Number of json command since server start.",
 			nil,
 			nil,
 		),
-		command_flushattrs: prometheus.NewDesc(
+		command_callpq: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "command_callpq"),
 			"Number of callpq command since server start.",
 			nil,
@@ -237,19 +237,19 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 			nil,
 			nil,
 		),
-		dist_queries: prometheus.NewDesc(
+		workers_total: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "workers_total"),
 			"Number of workers total since server start.",
 			nil,
 			nil,
 		),
-		dist_queries: prometheus.NewDesc(
+		workers_active: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "workers_active"),
 			"Number of workers active since server start.",
 			nil,
 			nil,
 		),
-		dist_queries: prometheus.NewDesc(
+		work_queue_length: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "work_queue_length"),
 			"Number of work queue length since server start.",
 			nil,

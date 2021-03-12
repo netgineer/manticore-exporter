@@ -11,6 +11,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-include Makefile.common
+VERSION := 0.0.1
+LDFLAGS := -X main.Version=$(VERSION)
+GOFLAGS := -ldflags "$(LDFLAGS) -s -w"
+GOARCH ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))
 
-DOCKER_IMAGE_NAME ?= manticore-exporter
+
+all: clean build
+
+deps:
+	@go get -u github.com/golang/dep/cmd/dep
+	@dep ensure
+build:
+	@mkdir -p ./dist
+	@export CGO_ENABLED=0; export GOOS=linux; go build $(GOFLAGS) -o ./dist/sphinx_exporter.linux-${GOARCH}
+	@export CGO_ENABLED=0; export GOOS=darwin; go build $(GOFLAGS) -o ./dist/sphinx_exporter.darwin-${GOARCH}
+
+clean:
+	@rm -rf ./dist
+
+.PHONY: all deps build clean

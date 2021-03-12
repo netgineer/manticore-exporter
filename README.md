@@ -20,5 +20,7 @@ make
 ## Collectors
 
 The exporter collects a number of statistics from the server:
+
 https://manual.manticoresearch.com/Profiling_and_monitoring/Node_status#SHOW-STATUS
+
 https://manual.manticoresearch.com/Profiling_and_monitoring/Index_settings_and_status/SHOW_INDEX_STATUS#SHOW-INDEX-STATUS

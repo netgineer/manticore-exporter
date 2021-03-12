@@ -1,5 +1,7 @@
 /.build
 /.release
 /.tarballs
-manticore_exporter
+/dist
+/grafana_dashboard
+.goreleaser.yml
 *.tar.gz

@@ -4,5 +4,5 @@
 /dist
 /grafana_dashboard
 .goreleaser.yml
-.gl_token
+.gh_token
 *.tar.gz

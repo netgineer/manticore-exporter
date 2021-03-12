@@ -1,0 +1,8 @@
+/.build
+/.release
+/.tarballs
+/dist
+/grafana_dashboard
+.goreleaser.yml
+.gh_token
+*.tar.gz

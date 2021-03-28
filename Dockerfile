@@ -11,11 +11,7 @@ WORKDIR /src
 # Import the code from the context.
 COPY ./ ./ 
 
-RUN ls -la 
-RUN pwd
 RUN make
-
-RUN ls -la 
 
 #
 # Alpine release container

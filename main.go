@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -23,7 +24,7 @@ var (
 	labels = []string{"index"}
 )
 
-// Exporter collects metrics from a searchd server.
+// Exporter collects metrics from a manticore server.
 type Exporter struct {
 	manticore string
 
@@ -31,7 +32,7 @@ type Exporter struct {
 	uptime                *prometheus.Desc
 	connections           *prometheus.Desc
 	maxed_out             *prometheus.Desc
-	version								*prometheus.Desc
+	version               *prometheus.Desc
 	mysql_version         *prometheus.Desc
 	command_search        *prometheus.Desc
 	command_update        *prometheus.Desc
@@ -40,20 +41,20 @@ type Exporter struct {
 	command_persist       *prometheus.Desc
 	command_status        *prometheus.Desc
 	command_flushattrs    *prometheus.Desc
-	command_set						*prometheus.Desc
-	command_insert				*prometheus.Desc
-	command_replace				*prometheus.Desc
-	command_commit				*prometheus.Desc
-	command_suggest				*prometheus.Desc
-	command_json					*prometheus.Desc
-	command_callpq				*prometheus.Desc
+	command_set           *prometheus.Desc
+	command_insert        *prometheus.Desc
+	command_replace       *prometheus.Desc
+	command_commit        *prometheus.Desc
+	command_suggest       *prometheus.Desc
+	command_json          *prometheus.Desc
+	command_callpq        *prometheus.Desc
 	agent_connect         *prometheus.Desc
 	agent_retry           *prometheus.Desc
 	queries               *prometheus.Desc
 	dist_queries          *prometheus.Desc
-	workers_total					*prometheus.Desc
-	workers_active				*prometheus.Desc
-	work_queue_length			*prometheus.Desc
+	workers_total         *prometheus.Desc
+	workers_active        *prometheus.Desc
+	work_queue_length     *prometheus.Desc
 	query_wall            *prometheus.Desc
 	query_cpu             *prometheus.Desc
 	dist_wall             *prometheus.Desc
@@ -86,6 +87,9 @@ type Exporter struct {
 	disk_bytes            *prometheus.Desc
 	mem_limit             *prometheus.Desc
 	threads_count         *prometheus.Desc
+	cluster_status        *prometheus.Desc
+	cluster_size          *prometheus.Desc
+	cluster_node_state    *prometheus.Desc
 }
 
 func NewExporter(server string, port string, timeout time.Duration) *Exporter {
@@ -95,7 +99,7 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 		manticore: c,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
-			"Could the searchd server be reached.",
+			"Could the manticore server be reached.",
 			nil,
 			nil,
 		),
@@ -447,6 +451,24 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 			[]string{"state"},
 			nil,
 		),
+		cluster_status: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "cluster_status"),
+			"Cluster Status.",
+			nil,
+			nil,
+		),
+		cluster_size: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "cluster_size"),
+			"Cluster Size.",
+			nil,
+			nil,
+		),
+		cluster_node_state: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "cluster_node_state"),
+			"Cluster Node State.",
+			nil,
+			nil,
+		),
 	}
 }
 
@@ -510,6 +532,9 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.disk_bytes
 	ch <- e.mem_limit
 	ch <- e.threads_count
+	ch <- e.cluster_size
+	ch <- e.cluster_status
+	ch <- e.cluster_node_state
 }
 
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
@@ -541,7 +566,22 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		variables[metric] = counter
 	}
 
+	// Cluster fields
+	var cluster = variables["cluster_name"]
+	var cluster_node_states = map[string]string{
+		"closed":    "0",
+		"destroyed": "1",
+		"joining":   "2",
+		"donor":     "3",
+		"synced":    "4",
+	}
+	var cluster_node_statuses = map[string]string{
+		"primary":     "0",
+		"non-primary": "1",
+	}
+
 	for k, v := range variables {
+		var override_value string
 		switch {
 		case k == "uptime":
 			ch <- prometheus.MustNewConstMetric(e.uptime, prometheus.GaugeValue, parse(v))
@@ -637,6 +677,14 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
 		case k == "qcache_used_bytes":
 			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
+		case k == fmt.Sprintf("cluster_%s_size", cluster):
+			ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(v))
+		case k == fmt.Sprintf("cluster_%s_status", cluster):
+			override_value = cluster_node_statuses[v]
+			ch <- prometheus.MustNewConstMetric(e.cluster_status, prometheus.CounterValue, parse(override_value))
+		case k == fmt.Sprintf("cluster_%s_node_state", cluster):
+			override_value = cluster_node_states[v]
+			ch <- prometheus.MustNewConstMetric(e.cluster_node_state, prometheus.CounterValue, parse(override_value))
 		}
 	}
 
@@ -714,11 +762,20 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 	for threads_rows.Next() {
 		var tid string
+		var name string
 		var proto string
 		var state string
+		var host string
+		var connid string
 		var time string
+		var work_time string
+		var work_time_cpu string
+		var thd_eff string
+		var jobs_done string
+		var last_job_took string
+		var in_idle string
 		var info string
-		err := threads_rows.Scan(&tid, &proto, &state, &time, &info)
+		err := threads_rows.Scan(&tid, &name, &proto, &state, &host, &connid, &time, &work_time, &work_time_cpu, &thd_eff, &jobs_done, &last_job_took, &in_idle, &info)
 		if err != nil {
 			log.Error(err)
 			return

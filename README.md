@@ -16,6 +16,42 @@ By default the manticore\_exporter serves on port `0.0.0.0:9247` at `/metrics`
 make
 ./manticore_exporter
 ```
+Alternatively a Dockerfile is supplied
+
+```
+docker build -t manticore_exporter .
+docker run -p 9247:9247 manticore_exporter
+```
+
+Full
+
+```
+docker run -d --name manticore_exporter \
+-p 9247:9247 manticore_exporter:latest \
+--manticore.address=localhost \
+--manticore.port=9306 \
+--manticore.timeout=1s \
+--web.listen-address=:9247 \
+--web.telemetry-path=/metrics
+```
+
+### Pre-build binaries
+
+For pre-built binaries please take a look at [the releases](https://github.com/netgineer/manticore-exporter/releases).
+
+
+### Basic Prometheus Configuration
+
+Add a block to the `scrape_configs` of your prometheus.yml config file:
+
+```yaml
+scrape_configs:
+  - job_name: manticore_exporter
+    static_configs:
+    - targets: ['<<MANTICORE-EXPORTER-HOSTNAME>>:9247']
+```
+
+and adjust the host name accordingly.
 
 ## Collectors
 

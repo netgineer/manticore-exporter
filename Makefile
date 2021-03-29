@@ -27,6 +27,7 @@ build:
 	@export CGO_ENABLED=0; export GOOS=linux; go build $(GOFLAGS) -o ./dist/manticore_exporter.linux-${GOARCH}.$(VERSION)
 	@export CGO_ENABLED=0; export GOOS=darwin; go build $(GOFLAGS) -o ./dist/manticore_exporter.darwin-${GOARCH}.$(VERSION)
 
+
 clean:
 	@rm -rf ./dist
 

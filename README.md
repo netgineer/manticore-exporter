@@ -24,3 +24,18 @@ The exporter collects a number of statistics from the server:
 https://manual.manticoresearch.com/Profiling_and_monitoring/Node_status#SHOW-STATUS
 
 https://manual.manticoresearch.com/Profiling_and_monitoring/Index_settings_and_status/SHOW_INDEX_STATUS#SHOW-INDEX-STATUS
+
+## Cluster metrics
+
+Node states and status are converted from strings to numerical values according to the table
+
+| manticore   | exporter  |
+| ----------- |---|
+| closed      | 0 |
+| destroyed   | 1 |
+| joining     | 2 |
+| donor       | 3 |
+| synced      | 4 |
+|             |
+| primary     | 0 |
+| non-primary | 1 |

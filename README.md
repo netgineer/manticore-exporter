@@ -35,6 +35,12 @@ docker run -d --name manticore_exporter \
 --web.telemetry-path=/metrics
 ```
 
+Or you can just pull from docker hub
+
+```
+docker pull netgineer/manticore-exporter
+```
+
 ### Pre-build binaries
 
 For pre-built binaries please take a look at [the releases](https://github.com/netgineer/manticore-exporter/releases).

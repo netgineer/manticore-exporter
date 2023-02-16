@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VERSION := 0.1.0
+VERSION := 0.1.1
 LDFLAGS := -X main.Version=$(VERSION)
 GOFLAGS := -ldflags "$(LDFLAGS) -s -w"
 GOARCH ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m)))

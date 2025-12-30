@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -553,6 +554,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		log.Error(err)
 		return
 	}
+	defer rows.Close()
 	variables := make(map[string]string)
 
 	for rows.Next() {
@@ -615,9 +617,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.command_replace, prometheus.CounterValue, parse(v))
 		case k == "command_commit":
 			ch <- prometheus.MustNewConstMetric(e.command_commit, prometheus.CounterValue, parse(v))
-		case k == "command_flushattrs":
+		case k == "command_json":
 			ch <- prometheus.MustNewConstMetric(e.command_json, prometheus.CounterValue, parse(v))
-		case k == "command_flushattrs":
+		case k == "command_callpq":
 			ch <- prometheus.MustNewConstMetric(e.command_callpq, prometheus.CounterValue, parse(v))
 		case k == "agent_connect":
 			ch <- prometheus.MustNewConstMetric(e.agent_connect, prometheus.CounterValue, parse(v))
@@ -675,8 +677,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.qcache_cached_queries, prometheus.CounterValue, parse(v))
 		case k == "qcache_used_bytes":
 			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
-		case k == "qcache_used_bytes":
-			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
+		case k == "qcache_hits":
+			ch <- prometheus.MustNewConstMetric(e.qcache_hits, prometheus.CounterValue, parse(v))
 		case k == fmt.Sprintf("cluster_%s_size", cluster):
 			ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(v))
 		case k == fmt.Sprintf("cluster_%s_status", cluster):
@@ -696,6 +698,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		log.Error(err)
 		return
 	}
+	defer indexes.Close()
 
 	for indexes.Next() {
 		var index string
@@ -750,6 +753,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(e.mem_limit, prometheus.CounterValue, parse(value), index)
 			}
 		}
+		metrics.Close()
 	}
 
 	threads_rows, err := db.Query("SHOW THREADS")
@@ -757,29 +761,46 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		log.Error(err)
 		return
 	}
+	defer threads_rows.Close()
+
+	threads_columns, err := threads_rows.Columns()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	stateIdx := -1
+	tidIdx := -1
+	for idx, column := range threads_columns {
+		switch strings.ToLower(column) {
+		case "state":
+			stateIdx = idx
+		case "tid":
+			tidIdx = idx
+		}
+	}
+
+	if stateIdx == -1 || tidIdx == -1 {
+		log.Error("SHOW THREADS response does not include expected tid/state columns")
+		return
+	}
+
+	threadValues := make([]sql.RawBytes, len(threads_columns))
+	threadScanArgs := make([]interface{}, len(threads_columns))
+	for i := range threadValues {
+		threadScanArgs[i] = &threadValues[i]
+	}
 
 	threads := make(map[string][]string)
 
 	for threads_rows.Next() {
-		var tid string
-		var name string
-		var proto string
-		var state string
-		var host string
-		var connid string
-		var time string
-		var work_time string
-		var work_time_cpu string
-		var thd_eff string
-		var jobs_done string
-		var last_job_took string
-		var in_idle string
-		var info string
-		err := threads_rows.Scan(&tid, &name, &proto, &state, &host, &connid, &time, &work_time, &work_time_cpu, &thd_eff, &jobs_done, &last_job_took, &in_idle, &info)
-		if err != nil {
+		if err := threads_rows.Scan(threadScanArgs...); err != nil {
 			log.Error(err)
 			return
 		}
+
+		state := string(threadValues[stateIdx])
+		tid := string(threadValues[tidIdx])
 		threads[state] = append(threads[state], tid)
 	}
 

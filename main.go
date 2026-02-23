@@ -1,14 +1,11 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"math"
 	"net/http"
 	"strconv"
-	"strings"
-	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -30,8 +27,6 @@ var (
 // Exporter collects metrics from a manticore server.
 type Exporter struct {
 	manticore string
-	timeout   time.Duration
-	mu        sync.Mutex
 
 	up                    *prometheus.Desc
 	uptime                *prometheus.Desc
@@ -98,12 +93,10 @@ type Exporter struct {
 }
 
 func NewExporter(server string, port string, timeout time.Duration) *Exporter {
-	timeoutValue := timeout.String()
-	c := fmt.Sprintf("@tcp(%s:%s)/?timeout=%s&readTimeout=%s&writeTimeout=%s", server, port, timeoutValue, timeoutValue, timeoutValue)
+	c := "@tcp(" + server + ":" + port + ")/"
 
 	return &Exporter{
 		manticore: c,
-		timeout:   timeout,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
 			"Could the manticore server be reached.",
@@ -545,33 +538,21 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	status := 0.0
-	defer func() {
-		ch <- prometheus.MustNewConstMetric(e.up, prometheus.GaugeValue, status)
-	}()
-
-	ctx, cancel := context.WithTimeout(context.Background(), e.timeout)
-	defer cancel()
+	status := 1
 
 	db, err := sql.Open("mysql", e.manticore)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
 	// will close DB connection while return
 	defer db.Close()
 
-	rows, err := db.QueryContext(ctx, "SHOW STATUS")
+	rows, err := db.Query("SHOW STATUS")
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	defer rows.Close()
 	variables := make(map[string]string)
 
 	for rows.Next() {
@@ -583,10 +564,6 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			return
 		}
 		variables[metric] = counter
-	}
-	if err := rows.Err(); err != nil {
-		log.Error(err)
-		return
 	}
 
 	// Cluster fields
@@ -714,12 +691,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	//Collect Indexes
 	databases := make(map[string]string)
 
-	indexes, err := db.QueryContext(ctx, "SHOW TABLES")
+	indexes, err := db.Query("SHOW TABLES")
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	defer indexes.Close()
 
 	for indexes.Next() {
 		var index string
@@ -731,21 +707,17 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 		databases[index] = index_type
 	}
-	if err := indexes.Err(); err != nil {
-		log.Error(err)
-		return
-	}
 	ch <- prometheus.MustNewConstMetric(e.index_count, prometheus.GaugeValue, float64(len(databases)))
 
 	//Collect metrics per index
-	for index := range databases {
+	for index, _ := range databases {
 
 		// Distributed indexes has no index status
 
 		if databases[index] == "distributed" {
 			continue
 		}
-		metrics, err := db.QueryContext(ctx, "SHOW INDEX "+index+" STATUS")
+		metrics, err := db.Query("SHOW INDEX " + index + " STATUS")
 		if err != nil {
 			log.Error(err)
 			return
@@ -778,73 +750,44 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(e.mem_limit, prometheus.CounterValue, parse(value), index)
 			}
 		}
-		if err := metrics.Err(); err != nil {
-			metrics.Close()
-			log.Error(err)
-			return
-		}
-		metrics.Close()
 	}
 
-	threadsRows, err := db.QueryContext(ctx, "SHOW THREADS")
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	defer threadsRows.Close()
-
-	columns, err := threadsRows.Columns()
+	threads_rows, err := db.Query("SHOW THREADS")
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	tidIdx := -1
-	stateIdx := -1
-	for i, column := range columns {
-		switch {
-		case strings.EqualFold(column, "tid"):
-			tidIdx = i
-		case strings.EqualFold(column, "state"):
-			stateIdx = i
-		}
-	}
+	threads := make(map[string][]string)
 
-	if tidIdx == -1 || stateIdx == -1 {
-		log.Errorf("SHOW THREADS does not contain required columns tid/state (columns: %v)", columns)
-		return
-	}
-
-	threadCounts := make(map[string]int)
-	values := make([]sql.RawBytes, len(columns))
-	scanArgs := make([]interface{}, len(columns))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-
-	for threadsRows.Next() {
-		err := threadsRows.Scan(scanArgs...)
+	for threads_rows.Next() {
+		var tid string
+		var name string
+		var proto string
+		var state string
+		var host string
+		var connid string
+		var time string
+		var work_time string
+		var work_time_cpu string
+		var thd_eff string
+		var jobs_done string
+		var last_job_took string
+		var in_idle string
+		var info string
+		err := threads_rows.Scan(&tid, &name, &proto, &state, &host, &connid, &time, &work_time, &work_time_cpu, &thd_eff, &jobs_done, &last_job_took, &in_idle, &info)
 		if err != nil {
 			log.Error(err)
 			return
 		}
-		tid := string(values[tidIdx])
-		state := string(values[stateIdx])
-		if tid == "" {
-			continue
-		}
-		threadCounts[state]++
-	}
-	if err := threadsRows.Err(); err != nil {
-		log.Error(err)
-		return
+		threads[state] = append(threads[state], tid)
 	}
 
-	for threadsState, count := range threadCounts {
-		ch <- prometheus.MustNewConstMetric(e.threads_count, prometheus.GaugeValue, float64(count), threadsState)
+	for threads_state, threads_times := range threads {
+		ch <- prometheus.MustNewConstMetric(e.threads_count, prometheus.CounterValue, float64(len(threads_times)), threads_state)
 	}
 
-	status = 1.0
+	ch <- prometheus.MustNewConstMetric(e.up, prometheus.GaugeValue, float64(status))
 }
 
 func parse(stat string) float64 {

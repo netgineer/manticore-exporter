@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -563,7 +564,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			log.Error(err)
 			return
 		}
-		variables[metric] = counter
+		variables[strings.ToLower(strings.TrimSpace(metric))] = counter
 	}
 
 	// Cluster fields
@@ -615,9 +616,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.command_replace, prometheus.CounterValue, parse(v))
 		case k == "command_commit":
 			ch <- prometheus.MustNewConstMetric(e.command_commit, prometheus.CounterValue, parse(v))
-		case k == "command_flushattrs":
+		case k == "command_json":
 			ch <- prometheus.MustNewConstMetric(e.command_json, prometheus.CounterValue, parse(v))
-		case k == "command_flushattrs":
+		case k == "command_callpq":
 			ch <- prometheus.MustNewConstMetric(e.command_callpq, prometheus.CounterValue, parse(v))
 		case k == "agent_connect":
 			ch <- prometheus.MustNewConstMetric(e.agent_connect, prometheus.CounterValue, parse(v))

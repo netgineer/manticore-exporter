@@ -539,7 +539,10 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
-	status := 1
+	status := 0.0
+	defer func() {
+		ch <- prometheus.MustNewConstMetric(e.up, prometheus.GaugeValue, status)
+	}()
 
 	db, err := sql.Open("mysql", e.manticore)
 	if err != nil {
@@ -565,11 +568,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			log.Error(err)
 			return
 		}
-		variables[metric] = counter
+		variables[strings.ToLower(strings.TrimSpace(metric))] = counter
 	}
 
 	// Cluster fields
 	var cluster = variables["cluster_name"]
+	clusterKey := strings.ToLower(strings.TrimSpace(cluster))
 	var cluster_node_states = map[string]string{
 		"closed":    "0",
 		"destroyed": "1",
@@ -677,14 +681,17 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.qcache_cached_queries, prometheus.CounterValue, parse(v))
 		case k == "qcache_used_bytes":
 			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
+		case k == "qcache_used_bytes":
+			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
+		case k == fmt.Sprintf("cluster_%s_size", clusterKey):
 		case k == "qcache_hits":
 			ch <- prometheus.MustNewConstMetric(e.qcache_hits, prometheus.CounterValue, parse(v))
 		case k == fmt.Sprintf("cluster_%s_size", cluster):
 			ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(v))
-		case k == fmt.Sprintf("cluster_%s_status", cluster):
+		case k == fmt.Sprintf("cluster_%s_status", clusterKey):
 			override_value = cluster_node_statuses[v]
 			ch <- prometheus.MustNewConstMetric(e.cluster_status, prometheus.CounterValue, parse(override_value))
-		case k == fmt.Sprintf("cluster_%s_node_state", cluster):
+		case k == fmt.Sprintf("cluster_%s_node_state", clusterKey):
 			override_value = cluster_node_states[v]
 			ch <- prometheus.MustNewConstMetric(e.cluster_node_state, prometheus.CounterValue, parse(override_value))
 		}
@@ -808,7 +815,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(e.threads_count, prometheus.CounterValue, float64(len(threads_times)), threads_state)
 	}
 
-	ch <- prometheus.MustNewConstMetric(e.up, prometheus.GaugeValue, float64(status))
+	status = 1.0
 }
 
 func parse(stat string) float64 {

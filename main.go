@@ -684,10 +684,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		case k == "qcache_used_bytes":
 			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
 		case k == fmt.Sprintf("cluster_%s_size", clusterKey):
+			ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(v))
+		case strings.HasPrefix(k, "cluster_") && strings.HasSuffix(k, "_size"):
+			ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(v))
 		case k == "qcache_hits":
 			ch <- prometheus.MustNewConstMetric(e.qcache_hits, prometheus.CounterValue, parse(v))
-		case k == fmt.Sprintf("cluster_%s_size", cluster):
-			ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(v))
 		case k == fmt.Sprintf("cluster_%s_status", clusterKey):
 			override_value = cluster_node_statuses[v]
 			ch <- prometheus.MustNewConstMetric(e.cluster_status, prometheus.CounterValue, parse(override_value))

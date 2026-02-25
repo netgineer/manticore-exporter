@@ -585,6 +585,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		"primary":     "0",
 		"non-primary": "1",
 	}
+	clusterSizeValue, clusterSizeOK := findClusterSize(variables, clusterKey)
 
 	for k, v := range variables {
 		var override_value string
@@ -681,12 +682,6 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(e.qcache_cached_queries, prometheus.CounterValue, parse(v))
 		case k == "qcache_used_bytes":
 			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
-		case k == "qcache_used_bytes":
-			ch <- prometheus.MustNewConstMetric(e.qcache_used_bytes, prometheus.CounterValue, parse(v))
-		case k == fmt.Sprintf("cluster_%s_size", clusterKey):
-			ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(v))
-		case strings.HasPrefix(k, "cluster_") && strings.HasSuffix(k, "_size"):
-			ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(v))
 		case k == "qcache_hits":
 			ch <- prometheus.MustNewConstMetric(e.qcache_hits, prometheus.CounterValue, parse(v))
 		case k == fmt.Sprintf("cluster_%s_status", clusterKey):
@@ -696,6 +691,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			override_value = cluster_node_states[v]
 			ch <- prometheus.MustNewConstMetric(e.cluster_node_state, prometheus.CounterValue, parse(override_value))
 		}
+	}
+	if clusterSizeOK {
+		ch <- prometheus.MustNewConstMetric(e.cluster_size, prometheus.CounterValue, parse(clusterSizeValue))
 	}
 
 	//Collect Indexes
@@ -837,6 +835,21 @@ func parse(stat string) float64 {
 		v = math.NaN()
 	}
 	return v
+}
+
+func findClusterSize(variables map[string]string, clusterKey string) (string, bool) {
+	if clusterKey != "" {
+		if v, ok := variables[fmt.Sprintf("cluster_%s_size", clusterKey)]; ok {
+			return v, true
+		}
+	}
+
+	for k, v := range variables {
+		if strings.HasPrefix(k, "cluster_") && strings.HasSuffix(k, "_size") {
+			return v, true
+		}
+	}
+	return "", false
 }
 
 func main() {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math"
@@ -28,6 +29,7 @@ var (
 // Exporter collects metrics from a manticore server.
 type Exporter struct {
 	manticore string
+	timeout   time.Duration
 
 	up                    *prometheus.Desc
 	uptime                *prometheus.Desc
@@ -98,6 +100,7 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 
 	return &Exporter{
 		manticore: c,
+		timeout:   timeout,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
 			"Could the manticore server be reached.",
@@ -552,23 +555,36 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// will close DB connection while return
 	defer db.Close()
 
-	rows, err := db.Query("SHOW STATUS")
-	if err != nil {
-		log.Error(err)
-		return
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), e.timeout)
+		defer cancel()
+		if err := db.PingContext(ctx); err != nil {
+			log.Error(err)
+			return
+		}
 	}
-	defer rows.Close()
-	variables := make(map[string]string)
 
-	for rows.Next() {
-		var metric string
-		var counter string
-		err = rows.Scan(&metric, &counter)
+	variables := make(map[string]string)
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), e.timeout)
+		defer cancel()
+		rows, err := db.QueryContext(ctx, "SHOW STATUS")
 		if err != nil {
 			log.Error(err)
 			return
 		}
-		variables[strings.ToLower(strings.TrimSpace(metric))] = counter
+		defer rows.Close()
+
+		for rows.Next() {
+			var metric string
+			var counter string
+			err = rows.Scan(&metric, &counter)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			variables[strings.ToLower(strings.TrimSpace(metric))] = counter
+		}
 	}
 
 	// Cluster fields
@@ -699,12 +715,17 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	//Collect Indexes
 	databases := make(map[string]string)
 
-	indexes, err := db.Query("SHOW TABLES")
-	if err != nil {
-		log.Error(err)
-		return
+	var indexes *sql.Rows
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), e.timeout)
+		defer cancel()
+		indexes, err = db.QueryContext(ctx, "SHOW TABLES")
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		defer indexes.Close()
 	}
-	defer indexes.Close()
 
 	for indexes.Next() {
 		var index string
@@ -726,10 +747,15 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		if databases[index] == "distributed" {
 			continue
 		}
-		metrics, err := db.Query("SHOW INDEX " + index + " STATUS")
-		if err != nil {
-			log.Error(err)
-			return
+		var metrics *sql.Rows
+		{
+			ctx, cancel := context.WithTimeout(context.Background(), e.timeout)
+			defer cancel()
+			metrics, err = db.QueryContext(ctx, "SHOW INDEX "+index+" STATUS")
+			if err != nil {
+				log.Error(err)
+				return
+			}
 		}
 
 		for metrics.Next() {
@@ -762,10 +788,15 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		metrics.Close()
 	}
 
-	threads_rows, err := db.Query("SHOW THREADS")
-	if err != nil {
-		log.Error(err)
-		return
+	var threads_rows *sql.Rows
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), e.timeout)
+		defer cancel()
+		threads_rows, err = db.QueryContext(ctx, "SHOW THREADS")
+		if err != nil {
+			log.Error(err)
+			return
+		}
 	}
 	defer threads_rows.Close()
 

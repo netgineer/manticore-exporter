@@ -67,6 +67,8 @@ https://manual.manticoresearch.com/Profiling_and_monitoring/Node_status#SHOW-STA
 
 https://manual.manticoresearch.com/Profiling_and_monitoring/Index_settings_and_status/SHOW_INDEX_STATUS#SHOW-INDEX-STATUS
 
+It also exposes `manticore_build_info{version="..."}` with value `1` so the running Manticore Search version can be scraped as a label.
+
 ## Cluster metrics
 
 Node states and status are converted from strings to numerical values according to the table

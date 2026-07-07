@@ -36,6 +36,7 @@ type Exporter struct {
 	connections           *prometheus.Desc
 	maxed_out             *prometheus.Desc
 	version               *prometheus.Desc
+	build_info            *prometheus.Desc
 	mysql_version         *prometheus.Desc
 	command_search        *prometheus.Desc
 	command_update        *prometheus.Desc
@@ -129,6 +130,12 @@ func NewExporter(server string, port string, timeout time.Duration) *Exporter {
 			prometheus.BuildFQName(namespace, "", "version"),
 			"Server version.",
 			nil,
+			nil,
+		),
+		build_info: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "build_info"),
+			"Manticore Search version information.",
+			[]string{"version"},
 			nil,
 		),
 		mysql_version: prometheus.NewDesc(
@@ -482,6 +489,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.connections
 	ch <- e.maxed_out
 	ch <- e.version
+	ch <- e.build_info
 	ch <- e.mysql_version
 	ch <- e.command_search
 	ch <- e.command_update
@@ -602,6 +610,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		"non-primary": "1",
 	}
 	clusterSizeValue, clusterSizeOK := findClusterSize(variables, clusterKey)
+	if buildVersion, ok := variables["version"]; ok && buildVersion != "" {
+		ch <- prometheus.MustNewConstMetric(e.build_info, prometheus.GaugeValue, 1, buildVersion)
+	}
 
 	for k, v := range variables {
 		var override_value string
